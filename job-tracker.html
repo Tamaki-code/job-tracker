@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>求人検討メモ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif; background: #f4f6fb; color: #1a1a2e; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white; padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  .btn-header { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+  .btn-header:hover { background: rgba(255,255,255,0.25); }
+
+  /* Import banner */
+  .import-banner { display: none; background: linear-gradient(135deg, #e8f5e9, #f1f8e9); border-bottom: 2px solid #66bb6a; padding: 14px 32px; align-items: center; gap: 12px; }
+  .import-banner.visible { display: flex; }
+  .banner-icon { font-size: 24px; }
+  .banner-text { flex: 1; }
+  .banner-text strong { display: block; font-size: 15px; color: #2e7d32; }
+  .banner-text span { font-size: 13px; color: #555; }
+  .banner-close { cursor: pointer; color: #888; font-size: 18px; padding: 4px 8px; }
+
+  .toolbar { display: flex; gap: 10px; padding: 16px 32px; background: white; border-bottom: 1px solid #e8eaf0; align-items: center; flex-wrap: wrap; }
+  .toolbar input[type="text"] { padding: 8px 14px; border: 1.5px solid #dde1f0; border-radius: 8px; font-size: 14px; width: 200px; outline: none; transition: border-color 0.2s; }
+  .toolbar input[type="text"]:focus { border-color: #4f6ef7; }
+  .toolbar select { padding: 8px 10px; border: 1.5px solid #dde1f0; border-radius: 8px; font-size: 13px; outline: none; background: white; cursor: pointer; }
+  .btn { padding: 9px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: #4f6ef7; color: white; }
+  .btn-primary:hover { background: #3a57e8; }
+  .count-badge { margin-left: auto; background: #f0f2ff; color: #4f6ef7; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+
+  .main { padding: 24px 32px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; }
+
+  .card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1.5px solid #eef0f8; transition: box-shadow 0.2s, transform 0.15s; }
+  .card:hover { box-shadow: 0 6px 20px rgba(79,110,247,0.12); transform: translateY(-2px); }
+  .card.imported { border-color: #c8e6c9; }
+
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .card-company { font-size: 15px; font-weight: 700; flex: 1; line-height: 1.4; }
+  .card-overall { font-size: 22px; font-weight: 800; margin-left: 8px; flex-shrink: 0; }
+  .card-jobtitle { font-size: 12px; color: #777; margin-bottom: 10px; line-height: 1.4; }
+
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .tag { padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .tag.industry { background: #fff0f5; color: #e04f7f; }
+  .tag.role { background: #f0fff5; color: #27ae60; }
+  .tag.salary { background: #fff8e1; color: #f57c00; }
+  .tag.imported-badge { background: #e8f5e9; color: #388e3c; }
+
+  .card-ratings { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; background: #f8f9ff; border-radius: 10px; padding: 10px; }
+  .rating-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .rating-label { color: #777; }
+  .rating-value { font-weight: 700; font-size: 14px; }
+  .r-great { color: #4f6ef7; } .r-good { color: #27ae60; } .r-fair { color: #e67e22; } .r-bad { color: #e74c3c; } .r-none { color: #ccc; }
+
+  .card-memo { font-size: 12px; color: #555; background: #fffbf0; border-left: 3px solid #f5c842; padding: 8px 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 100px; overflow-y: auto; }
+
+  .card-footer { display: flex; align-items: center; gap: 8px; }
+  .card-source { flex: 1; }
+  .card-source a { font-size: 11px; color: #4f6ef7; text-decoration: none; }
+  .card-source a:hover { text-decoration: underline; }
+  .card-actions { display: flex; gap: 6px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+  .btn-edit-sm { background: #f0f2ff; color: #4f6ef7; }
+  .btn-del-sm { background: #fff0f0; color: #e74c3c; }
+  .btn-edit-sm:hover { background: #dde3ff; }
+  .btn-del-sm:hover { background: #ffe0e0; }
+
+  /* Analysis panel */
+  .analysis-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: #7c4dff;
+    padding: 8px 0 4px; border-top: 1px solid #f0f0f8; margin-top: 4px;
+    user-select: none;
+  }
+  .analysis-toggle:hover { color: #5e35b1; }
+  .analysis-toggle .chevron { transition: transform 0.2s; font-size: 10px; }
+  .analysis-toggle.open .chevron { transform: rotate(180deg); }
+  .analysis-panel { display: none; margin-top: 8px; }
+  .analysis-panel.open { display: block; }
+  .analysis-item { margin-bottom: 10px; }
+  .analysis-label {
+    font-size: 11px; font-weight: 700; color: #7c4dff;
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .analysis-text {
+    font-size: 12px; color: #444; line-height: 1.65;
+    background: #faf8ff; border-left: 3px solid #ce93d8;
+    padding: 7px 10px; border-radius: 0 8px 8px 0;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .empty-state { grid-column: 1/-1; text-align: center; padding: 60px; color: #aaa; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 18px; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .modal h2 { font-size: 18px; margin-bottom: 4px; }
+  .modal-subtitle { font-size: 13px; color: #27ae60; margin-bottom: 18px; font-weight: 500; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1.5px solid #dde1f0; border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; background: white; transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #4f6ef7; }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  .section-title { font-size: 11px; font-weight: 700; color: #4f6ef7; margin-bottom: 10px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ratings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
+  .btn-secondary { background: #f0f2ff; color: #4f6ef7; }
+
+  @media (max-width: 600px) {
+    header, .toolbar, .main { padding-left: 16px; padding-right: 16px; }
+    .cards { grid-template-columns: 1fr; }
+    .form-row, .ratings-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 求人検討メモ</h1>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn-header" onclick="exportData()">💾 バックアップ</button>
+    <label class="btn-header" style="cursor:pointer;">📂 復元<input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+    <a href="bookmarklet.html" class="btn-header" target="_blank">🔖 ブックマークレット設定</a>
+  </div>
+</header>
+
+<div class="import-banner" id="importBanner">
+  <div class="banner-icon">✨</div>
+  <div class="banner-text">
+    <strong id="bannerTitle">求人データを取り込みました</strong>
+    <span>内容を確認・編集して「保存する」を押してください</span>
+  </div>
+  <span class="banner-close" onclick="closeBanner()">✕</span>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍 会社名・メモで検索…" oninput="renderCards()">
+  <select id="filterIndustry" onchange="renderCards()"><option value="">業界：すべて</option></select>
+  <select id="filterRole" onchange="renderCards()"><option value="">職種：すべて</option></select>
+  <select id="filterOverall" onchange="renderCards()">
+    <option value="">総合評価：すべて</option>
+    <option value="◎">◎ 非常に興味あり</option>
+    <option value="○">○ 興味あり</option>
+    <option value="△">△ やや懸念あり</option>
+    <option value="×">× 見送り</option>
+  </select>
+  <select id="filterStatus" onchange="renderCards()">
+    <option value="">ステータス：すべて</option>
+    <option value="検討中">検討中</option>
+    <option value="気になる">気になる</option>
+    <option value="応募済み">応募済み</option>
+    <option value="見送り">見送り</option>
+  </select>
+  <select id="sortBy" onchange="renderCards()">
+    <option value="default">並び順：追加順</option>
+    <option value="overall">総合評価（◎→×）</option>
+    <option value="salary_desc">年収（高い順）</option>
+    <option value="salary_asc">年収（低い順）</option>
+    <option value="hours">勤務時間（良い順）</option>
+    <option value="remote">働き方（良い順）</option>
+    <option value="holiday">休日（良い順）</option>
+  </select>
+  <button class="btn btn-primary" onclick="openModal()">＋ 手動追加</button>
+  <span class="count-badge" id="countBadge">0 件</span>
+</div>
+
+<div class="main">
+  <div class="cards" id="cardsContainer"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <h2 id="modalTitle">求人を追加</h2>
+    <div class="modal-subtitle" id="modalSubtitle"></div>
+
+    <div class="section-title">基本情報</div>
+    <div class="form-group">
+      <label>会社名 *</label>
+      <input type="text" id="f_company" placeholder="例：ウェルスナビ株式会社">
+    </div>
+    <div class="form-group">
+      <label>求人タイトル</label>
+      <input type="text" id="f_jobTitle" placeholder="例：【東京】データサイエンティスト">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>業界</label>
+        <input type="text" id="f_industry" placeholder="例：金融・FinTech" list="industryList">
+        <datalist id="industryList"></datalist>
+      </div>
+      <div class="form-group">
+        <label>職種</label>
+        <input type="text" id="f_role" placeholder="例：データサイエンティスト" list="roleList">
+        <datalist id="roleList"></datalist>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>年収</label>
+        <input type="text" id="f_salary" placeholder="例：700〜1000万">
+      </div>
+      <div class="form-group">
+        <label>ステータス</label>
+        <select id="f_status">
+          <option value="検討中">検討中</option>
+          <option value="気になる">気になる</option>
+          <option value="応募済み">応募済み</option>
+          <option value="見送り">見送り</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>求人URL（自動入力されます）</label>
+      <input type="text" id="f_sourceUrl" placeholder="https://mypage.r-agent.com/joboffers/...">
+    </div>
+
+    <hr class="divider">
+    <div class="section-title">🌟 評価（◎ / ○ / △ / ×）</div>
+    <div class="ratings-grid">
+      <div class="form-group"><label>業務内容</label><select id="r_work"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+      <div class="form-group"><label>年収・待遇</label><select id="r_salary"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+      <div class="form-group"><label>勤務時間・残業</label><select id="r_hours"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+      <div class="form-group"><label>休日・休暇</label><select id="r_holiday"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+      <div class="form-group"><label>働き方（リモート等）</label><select id="r_remote"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+      <div class="form-group"><label>環境・福利厚生</label><select id="r_env"><option value="">-</option><option>◎</option><option>○</option><option>△</option><option>×</option></select></div>
+    </div>
+    <div class="form-group">
+      <label>総合評価</label>
+      <select id="f_overall">
+        <option value="">選択してください</option>
+        <option value="◎">◎ 非常に興味あり</option>
+        <option value="○">○ 興味あり</option>
+        <option value="△">△ やや懸念あり</option>
+        <option value="×">× 見送り</option>
+      </select>
+    </div>
+    <hr class="divider">
+    <div class="section-title">メモ</div>
+    <div class="form-group">
+      <label>気になる点・スキル要件・自由メモ</label>
+      <textarea id="f_memo" placeholder="業務内容に興味あり。PC自由選択で◎。勤務時間が8時間とやや長い…"></textarea>
+    </div>
+
+    <hr class="divider">
+    <div class="section-title" style="color:#7c4dff">🤖 Claude分析</div>
+    <div class="form-group">
+      <label>🎯 業務適性（これまでの経験との相性）</label>
+      <textarea id="a_fitness" placeholder="Salesforce経験・DataSpider等との親和性…" style="border-color:#e1d5f5"></textarea>
+    </div>
+    <div class="form-group">
+      <label>📈 キャリア拡張性（将来のキャリアアップ）</label>
+      <textarea id="a_career" placeholder="このポジションからどんなキャリアへ広がるか…" style="border-color:#e1d5f5"></textarea>
+    </div>
+    <div class="form-group">
+      <label>💡 応募時アピールポイント</label>
+      <textarea id="a_appeal" placeholder="この求人に対して特に刺さる経験・スキル…" style="border-color:#e1d5f5"></textarea>
+    </div>
+    <div class="form-group">
+      <label>🌐 業界の将来性</label>
+      <textarea id="a_outlook" placeholder="この業界の今後の動向・成長性…" style="border-color:#e1d5f5"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveJob()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Supabase ──
+const SUPABASE_URL = 'https://jfsgejwwlyvvfbxxagph.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_rNRoBPGkz-7vMj9Nea--GQ_pGwglfJN';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const RATINGS = [
+  {key:'work',label:'業務内容'},{key:'salary',label:'年収・待遇'},
+  {key:'hours',label:'勤務時間'},{key:'holiday',label:'休日・休暇'},
+  {key:'remote',label:'働き方'},{key:'env',label:'環境・福利'},
+];
+const STATUS_COLORS = {
+  '検討中':{bg:'#f0f2ff',color:'#4f6ef7'},'気になる':{bg:'#fff8e1',color:'#f57c00'},
+  '応募済み':{bg:'#e8f5e9',color:'#388e3c'},'見送り':{bg:'#fce4ec',color:'#c62828'},
+};
+function rc(v){return{'◎':'r-great','○':'r-good','△':'r-fair','×':'r-bad'}[v]||'r-none';}
+
+let jobs=[];
+let editingId=null;
+
+// ── Supabase CRUD ──
+async function dbLoad(){
+  const {data,error}=await db.from('jobs').select('id,data').order('id',{ascending:false});
+  if(error)throw error;
+  return data.map(r=>({id:r.id,...r.data}));
+}
+async function dbUpsert(job){
+  const {id,...data}=job;
+  const {error}=await db.from('jobs').upsert({id,data});
+  if(error)throw error;
+}
+async function dbBulkUpsert(jobList){
+  const rows=jobList.map(j=>{const{id,...data}=j;return{id,data};});
+  const {error}=await db.from('jobs').upsert(rows);
+  if(error)throw error;
+}
+async function dbDelete(id){
+  const {error}=await db.from('jobs').delete().eq('id',id);
+  if(error)throw error;
+}
+
+// localStorage cache（オフライン時のフォールバック）
+function saveCache(){localStorage.setItem('jobTracker',JSON.stringify(jobs));}
+function save(){saveCache();}
+
+// ── Init ──
+async function init(){
+  document.getElementById('cardsContainer').innerHTML='<div class="empty-state"><div style="font-size:48px">⏳</div><p>データを読み込み中...</p></div>';
+  try{
+    jobs=await dbLoad();
+    // 初回: localStorageにデータがあれば自動マイグレーション
+    if(jobs.length===0){
+      const local=JSON.parse(localStorage.getItem('jobTracker')||'[]');
+      if(local.length>0){
+        await dbBulkUpsert(local);
+        jobs=local;
+        console.log(`✅ ${local.length}件をSupabaseに移行しました`);
+      }
+    }
+    saveCache();
+  }catch(err){
+    console.warn('Supabase接続エラー、ローカルキャッシュを使用:',err);
+    jobs=JSON.parse(localStorage.getItem('jobTracker')||'[]');
+  }
+  renderCards();
+  tryImportFromHash();
+}
+
+// ── バックアップ / 復元 ──
+function exportData(){
+  const date=new Date().toISOString().slice(0,10);
+  const blob=new Blob([JSON.stringify(jobs,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`job-tracker-backup-${date}.json`;
+  a.click();
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!Array.isArray(data))throw new Error('invalid');
+      if(!confirm(`${data.length}件のデータを復元します。\n現在のデータは上書きされます。よろしいですか？`))return;
+      jobs=data;saveCache();renderCards();
+      alert('✅ '+data.length+'件をローカルに復元しました！\nSupabaseに同期中...');
+      await dbBulkUpsert(jobs);
+      alert('☁️ Supabaseへの同期が完了しました！');
+    }catch(err){alert('❌ ファイルの読み込みに失敗しました。\n正しいバックアップファイルか確認してください。');}
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ── Hash import ──
+function tryImportFromHash(){
+  const hash=window.location.hash;
+  if(!hash.startsWith('#import='))return;
+  try{
+    const data=JSON.parse(decodeURIComponent(escape(atob(hash.slice(8)))));
+    document.getElementById('importBanner').classList.add('visible');
+    document.getElementById('bannerTitle').textContent=`「${data.company}」の求人を取り込みました`;
+    openModal(null,data);
+    history.replaceState(null,'',window.location.pathname);
+  }catch(e){console.warn('Import failed:',e);}
+}
+function closeBanner(){document.getElementById('importBanner').classList.remove('visible');}
+
+// ── Filters ──
+function getFiltered(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const ind=document.getElementById('filterIndustry').value;
+  const role=document.getElementById('filterRole').value;
+  const overall=document.getElementById('filterOverall').value;
+  const status=document.getElementById('filterStatus').value;
+  return jobs.filter(j=>{
+    if(q&&!j.company.toLowerCase().includes(q)&&!(j.memo||'').toLowerCase().includes(q)&&!(j.jobTitle||'').toLowerCase().includes(q))return false;
+    if(ind&&j.industry!==ind)return false;
+    if(role&&j.role!==role)return false;
+    if(overall&&j.overall!==overall)return false;
+    if(status&&j.status!==status)return false;
+    return true;
+  });
+}
+function updateFilters(){
+  const industries=[...new Set(jobs.map(j=>j.industry).filter(Boolean))];
+  const roles=[...new Set(jobs.map(j=>j.role).filter(Boolean))];
+  const fi=document.getElementById('filterIndustry'),cur=fi.value;
+  fi.innerHTML='<option value="">業界：すべて</option>'+industries.map(i=>`<option${i===cur?' selected':''}>${i}</option>`).join('');
+  const fr=document.getElementById('filterRole'),curR=fr.value;
+  fr.innerHTML='<option value="">職種：すべて</option>'+roles.map(r=>`<option${r===curR?' selected':''}>${r}</option>`).join('');
+  document.getElementById('industryList').innerHTML=industries.map(i=>`<option value="${esc(i)}">`).join('');
+  document.getElementById('roleList').innerHTML=roles.map(r=>`<option value="${esc(r)}">`).join('');
+}
+
+// ── Sort ──
+const RATING_ORDER = {'◎':0,'○':1,'△':2,'×':3,'':4};
+function parseSalary(s){
+  if(!s) return -1;
+  // "700〜1100万" → 取れる最大値
+  const m = s.match(/(\d[\d,]+)[〜~](\d[\d,]+)万/);
+  if(m) return parseInt(m[2].replace(/,/g,''));
+  const m2 = s.match(/(\d[\d,]+)万/);
+  return m2 ? parseInt(m2[1].replace(/,/g,'')) : -1;
+}
+function sortJobs(list){
+  const by = document.getElementById('sortBy').value;
+  const sorted = [...list];
+  if(by==='default') return sorted;
+  if(by==='overall')   return sorted.sort((a,b)=> (RATING_ORDER[a.overall]??4)-(RATING_ORDER[b.overall]??4));
+  if(by==='salary_desc') return sorted.sort((a,b)=> parseSalary(b.salary)-parseSalary(a.salary));
+  if(by==='salary_asc')  return sorted.sort((a,b)=> {
+    const va=parseSalary(a.salary), vb=parseSalary(b.salary);
+    if(va<0&&vb<0) return 0; if(va<0) return 1; if(vb<0) return -1;
+    return va-vb;
+  });
+  if(by==='hours')   return sorted.sort((a,b)=> (RATING_ORDER[a.ratings?.hours]??4)-(RATING_ORDER[b.ratings?.hours]??4));
+  if(by==='remote')  return sorted.sort((a,b)=> (RATING_ORDER[a.ratings?.remote]??4)-(RATING_ORDER[b.ratings?.remote]??4));
+  if(by==='holiday') return sorted.sort((a,b)=> (RATING_ORDER[a.ratings?.holiday]??4)-(RATING_ORDER[b.ratings?.holiday]??4));
+  return sorted;
+}
+
+// ── Render ──
+function renderCards(){
+  updateFilters();
+  const filtered=sortJobs(getFiltered());
+  document.getElementById('countBadge').textContent=`${filtered.length} 件`;
+  const container=document.getElementById('cardsContainer');
+  if(filtered.length===0){container.innerHTML=`<div class="empty-state"><div style="font-size:48px">📭</div><p>該当する求人がありません</p></div>`;return;}
+  container.innerHTML=filtered.map(j=>{
+    const ratingsHTML=RATINGS.map(r=>{const v=j.ratings?.[r.key]||'-';return`<div class="rating-row"><span class="rating-label">${r.label}</span><span class="rating-value ${rc(v)}">${v}</span></div>`;}).join('');
+    const sc=STATUS_COLORS[j.status]||STATUS_COLORS['検討中'];
+    return`<div class="card${j.imported?' imported':''}">
+      <div class="card-header"><div class="card-company">${esc(j.company)}</div><div class="card-overall ${rc(j.overall)}">${j.overall||'-'}</div></div>
+      ${j.jobTitle?`<div class="card-jobtitle">${esc(j.jobTitle)}</div>`:''}
+      <div class="card-meta">
+        <span class="tag" style="background:${sc.bg};color:${sc.color}">${j.status||'検討中'}</span>
+        ${j.industry?`<span class="tag industry">${esc(j.industry)}</span>`:''}
+        ${j.role?`<span class="tag role">${esc(j.role)}</span>`:''}
+        ${j.salary?`<span class="tag salary">💴 ${esc(j.salary)}</span>`:''}
+        ${j.imported?`<span class="tag imported-badge">🔖 RA取込</span>`:''}
+      </div>
+      <div class="card-ratings">${ratingsHTML}</div>
+      ${j.memo?`<div class="card-memo">${esc(j.memo)}</div>`:''}
+      ${(j.analysis?.fitness||j.analysis?.career||j.analysis?.appeal||j.analysis?.outlook) ? `
+      <div class="analysis-toggle" id="atog-${j.id}" onclick="toggleAnalysis(${j.id})">
+        🤖 Claude分析 <span class="chevron">▼</span>
+      </div>
+      <div class="analysis-panel" id="apanel-${j.id}">
+        ${j.analysis?.fitness  ? `<div class="analysis-item"><div class="analysis-label">🎯 業務適性</div><div class="analysis-text">${esc(j.analysis.fitness)}</div></div>` : ''}
+        ${j.analysis?.career   ? `<div class="analysis-item"><div class="analysis-label">📈 キャリア拡張性</div><div class="analysis-text">${esc(j.analysis.career)}</div></div>` : ''}
+        ${j.analysis?.appeal   ? `<div class="analysis-item"><div class="analysis-label">💡 応募時アピールポイント</div><div class="analysis-text">${esc(j.analysis.appeal)}</div></div>` : ''}
+        ${j.analysis?.outlook  ? `<div class="analysis-item"><div class="analysis-label">🌐 業界の将来性</div><div class="analysis-text">${esc(j.analysis.outlook)}</div></div>` : ''}
+      </div>` : ''}
+      <div class="card-footer">
+        <div class="card-source">${j.sourceUrl?`<a href="${esc(j.sourceUrl)}" target="_blank">🔗 元の求人ページ</a>`:''}</div>
+        <div class="card-actions">
+          <button class="btn-sm btn-edit-sm" onclick="openModal(${j.id})">編集</button>
+          <button class="btn-sm btn-del-sm" onclick="deleteJob(${j.id})">削除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Modal ──
+function openModal(id,importData){
+  editingId=id||null;
+  const isImport=!!importData;
+  document.getElementById('modalTitle').textContent=isImport?'✨ 求人を取り込む':id?'求人を編集':'求人を追加';
+  document.getElementById('modalSubtitle').textContent=isImport?'リクルートエージェントから自動取得。確認・編集してから保存してください。':'';
+  const fill=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
+  const src=isImport?importData:id?jobs.find(x=>x.id===id):null;
+  if(src){
+    fill('f_company',src.company);fill('f_jobTitle',src.jobTitle);fill('f_industry',src.industry);
+    fill('f_role',src.role);fill('f_salary',src.salary);fill('f_status',src.status||'検討中');
+    fill('f_sourceUrl',src.sourceUrl);fill('f_overall',src.overall);fill('f_memo',src.memo);
+    RATINGS.forEach(r=>fill('r_'+r.key,src.ratings?.[r.key]||''));
+    fill('a_fitness',src.analysis?.fitness||'');fill('a_career',src.analysis?.career||'');
+    fill('a_appeal',src.analysis?.appeal||'');fill('a_outlook',src.analysis?.outlook||'');
+  }else{
+    ['f_company','f_jobTitle','f_industry','f_role','f_salary','f_sourceUrl','f_memo','a_fitness','a_career','a_appeal','a_outlook'].forEach(i=>fill(i,''));
+    fill('f_status','検討中');fill('f_overall','');
+    RATINGS.forEach(r=>fill('r_'+r.key,''));
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');editingId=null;}
+function handleOverlayClick(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+
+async function saveJob(){
+  const company=document.getElementById('f_company').value.trim();
+  if(!company){alert('会社名を入力してください');return;}
+  const ratings={};
+  RATINGS.forEach(r=>{ratings[r.key]=document.getElementById('r_'+r.key).value;});
+  const sourceUrl=document.getElementById('f_sourceUrl').value.trim();
+  const analysis={fitness:document.getElementById('a_fitness').value.trim(),career:document.getElementById('a_career').value.trim(),appeal:document.getElementById('a_appeal').value.trim(),outlook:document.getElementById('a_outlook').value.trim()};
+  const data={company,jobTitle:document.getElementById('f_jobTitle').value.trim(),industry:document.getElementById('f_industry').value.trim(),role:document.getElementById('f_role').value.trim(),salary:document.getElementById('f_salary').value.trim(),status:document.getElementById('f_status').value,sourceUrl,overall:document.getElementById('f_overall').value,memo:document.getElementById('f_memo').value.trim(),ratings,analysis,imported:!!sourceUrl};
+  let jobToSave;
+  if(editingId){const idx=jobs.findIndex(j=>j.id===editingId);if(idx!==-1){jobs[idx]={...jobs[idx],...data};jobToSave=jobs[idx];}}
+  else{jobToSave={id:Date.now(),...data};jobs.unshift(jobToSave);}
+  saveCache();closeModal();renderCards();
+  try{await dbUpsert(jobToSave);}catch(e){console.error('Supabase保存エラー:',e);}
+}
+async function deleteJob(id){
+  if(!confirm('この求人を削除しますか？'))return;
+  jobs=jobs.filter(j=>j.id!==id);saveCache();renderCards();
+  try{await dbDelete(id);}catch(e){console.error('Supabase削除エラー:',e);}
+}
+function toggleAnalysis(id){
+  const tog=document.getElementById('atog-'+id);
+  const pan=document.getElementById('apanel-'+id);
+  if(!tog||!pan)return;
+  tog.classList.toggle('open');
+  pan.classList.toggle('open');
+}
+
+init();
+</script>
+</body>
+</html>
