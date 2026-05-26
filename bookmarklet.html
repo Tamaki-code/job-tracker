@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ブックマークレット設定 | 求人検討メモ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif; background: #f4f6fb; color: #1a1a2e; min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 700; }
+  .btn-back { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 7px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; }
+
+  .main { max-width: 700px; margin: 40px auto; padding: 0 24px; }
+
+  .card { background: white; border-radius: 16px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .card h2 { font-size: 18px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card p { font-size: 14px; color: #555; line-height: 1.7; margin-bottom: 16px; }
+
+  .step { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step-num { width: 32px; height: 32px; background: #4f6ef7; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .step-body h3 { font-size: 15px; margin-bottom: 6px; }
+  .step-body p { font-size: 13px; color: #666; margin: 0; line-height: 1.6; }
+
+  .bookmarklet-container { background: #f0f4ff; border: 2px dashed #4f6ef7; border-radius: 12px; padding: 20px; text-align: center; margin: 16px 0; }
+  .bookmarklet-container p { font-size: 13px; color: #666; margin-bottom: 12px; }
+
+  .bookmarklet-link {
+    display: inline-block;
+    background: linear-gradient(135deg, #4f6ef7, #7c4dff);
+    color: white; padding: 12px 24px; border-radius: 10px;
+    font-size: 15px; font-weight: 700; text-decoration: none;
+    box-shadow: 0 4px 12px rgba(79,110,247,0.4);
+    cursor: grab; user-select: none;
+    border: 3px solid rgba(255,255,255,0.3);
+    transition: transform 0.15s;
+  }
+  .bookmarklet-link:hover { transform: scale(1.03); }
+  .bookmarklet-link:active { cursor: grabbing; }
+
+  .drag-hint { margin-top: 10px; font-size: 12px; color: #888; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .img-placeholder { background: #f8f9ff; border-radius: 10px; padding: 20px; text-align: center; color: #aaa; font-size: 13px; margin: 12px 0; border: 1px solid #eee; }
+
+  .usage-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+  .flow-step { background: #f0f2ff; color: #4f6ef7; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; text-align: center; }
+  .flow-arrow { color: #aaa; font-size: 18px; }
+
+  .auto-filled { background: #f8fff8; border-radius: 10px; padding: 16px; border: 1px solid #c8e6c9; }
+  .auto-filled h3 { font-size: 14px; color: #388e3c; margin-bottom: 10px; }
+  .auto-filled ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .auto-filled li { font-size: 13px; color: #555; display: flex; align-items: center; gap: 6px; }
+  .auto-filled li::before { content: '✅'; font-size: 12px; }
+
+  .note { background: #fff8e1; border-left: 4px solid #f5c842; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; line-height: 1.6; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔖 ブックマークレット設定</h1>
+  <a href="job-tracker.html" class="btn-back">← トラッカーに戻る</a>
+</header>
+
+<div class="main">
+
+  <!-- What is it -->
+  <div class="card">
+    <h2>📌 ブックマークレットとは？</h2>
+    <p>リクルートエージェントの<strong>求人詳細ページ</strong>でボタン1クリックするだけで、求人情報を自動的にトラッカーに取り込めるツールです。会社名・年収・勤務時間・スキル要件などが<strong>自動入力</strong>されます。</p>
+
+    <div class="usage-flow">
+      <div class="flow-step">🔍 RA で求人を見る</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">🔖 ブックマークをクリック</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">✨ 自動でデータ転送</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">💾 確認して保存</div>
+    </div>
+
+    <div class="auto-filled">
+      <h3>✅ 自動入力される項目</h3>
+      <ul>
+        <li>会社名</li>
+        <li>求人タイトル</li>
+        <li>年収レンジ</li>
+        <li>休日日数</li>
+        <li>勤務時間（評価も自動）</li>
+        <li>リモート・フレックス有無</li>
+        <li>職種（タイトルから推定）</li>
+        <li>スキル要件（メモ欄）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div class="card">
+    <h2>⚙️ セットアップ手順</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>ブックマークバーを表示する</h3>
+        <p>Chromeの場合：<strong>⌘ + Shift + B</strong> でブックマークバーを表示</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>下のボタンをブックマークバーにドラッグ＆ドロップ</h3>
+        <p>ボタンをそのままブラウザ上部のブックマークバーにドラッグしてください。</p>
+      </div>
+    </div>
+
+    <div class="bookmarklet-container">
+      <p>👇 このボタンをブックマークバーにドラッグ！</p>
+      <a class="bookmarklet-link" href="javascript:(function(){if(!location.hostname.includes('r-agent.com')){alert('リクルートエージェントの求人詳細ページで使ってください');return;}if(!/\/joboffers\//.test(location.pathname)){alert('求人の「詳細ページ」で使ってください\n\n求人タイトルをクリックして詳細を開いてから実行してください');return;}var body=(document.querySelector('main')||document.body).innerText;var article=document.querySelector('article');var company='';if(article){var lines=article.innerText.split('\n').map(function(s){return s.trim();}).filter(Boolean);company=lines[0]||'';}var h2=article?article.querySelector('h1,h2'):null;var jobTitle=h2?h2.innerText.trim():'';var salaryM=body.match(/(\d[\d,]+[〜~]\d[\d,]+万|\d[\d,]+万[^\n]{0,5})/);var salary=salaryM?salaryM[1]:'';var holidayM=body.match(/(\d{3,4})日/);var holiday=holidayM?holidayM[1]+'日':'';var hoursM=body.match(/(\d{1,2})時間(\d{2})?分?/);var workHours=hoursM?hoursM[0]:'';var hasRemote=/在宅|リモート/.test(body);var hasFlex=/フレックス/.test(body);var descM=body.match(/仕事内容\n([\s\S]+?)(?:求める能力|勤務条件|$)/);var desc=descM?descM[1].trim().substring(0,400):'';var skillM=body.match(/求める能力[・経験]*\n([\s\S]+?)(?:学歴|勤務条件|$)/);var skills=skillM?skillM[1].trim().substring(0,400):'';var role='';var roleMap=[['データサイエンティスト','データサイエンティスト'],['データアナリスト','データアナリスト'],['データエンジニア','データエンジニア'],['社内SE','社内SE・DX推進'],['DX推進','社内SE・DX推進'],['ITコンサル','ITコンサルタント'],['プロジェクトマネージャー','PM・PL'],['システム開発','システム開発エンジニア'],['インフラ','インフラエンジニア'],['BI','BIエンジニア'],['データマネジメント','データマネジメント']];for(var i=0;i<roleMap.length;i++){if((jobTitle+desc).includes(roleMap[i][0])){role=roleMap[i][1];break;}}var ratings={};if(workHours){var h=parseFloat(workHours);ratings.hours=h<=7?'◎':h<=7.5?'○':h<=8?'△':'×';}if(holiday){var d=parseInt(holiday);ratings.holiday=d>=125?'◎':d>=120?'○':d>=115?'△':'×';}if(hasRemote)ratings.remote='◎';else if(hasFlex)ratings.remote='○';var data={company:company,jobTitle:jobTitle,role:role,salary:salary,holiday:holiday,workHours:workHours,memo:(skills||desc)+'',ratings:ratings,sourceUrl:location.href};var encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data))));window.open('https://tamaki-code.github.io/job-tracker/job-tracker.html#import='+encoded,'_blank');})();">🔖 RAから求人を保存</a>
+      <div class="drag-hint">☝️ ドラッグしてブックマークバーへ</div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>リクルートエージェントの求人詳細ページで使う</h3>
+        <p>求人詳細ページを開いた状態で、ブックマークバーの「🔖 RAから求人を保存」をクリックするだけ！<br>サーバー起動は不要になりました 🎉</p>
+      </div>
+    </div>
+
+    <div class="note">
+      ⚠️ <strong>注意：</strong>ブックマークレットは求人の<strong>詳細ページ</strong>（URLに /joboffers/ が含まれるページ）でのみ動作します。一覧ページでは動作しません。
+    </div>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="card">
+    <h2>❓ うまくいかない場合</h2>
+    <div class="step">
+      <div class="step-num">!</div>
+      <div class="step-body">
+        <h3>トラッカーが開かない</h3>
+        <p>インターネット接続を確認してください。<a href="https://tamaki-code.github.io/job-tracker/job-tracker.html" target="_blank" style="color:#4f6ef7">こちらのURL</a>から直接開けるかも確認してみてください。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">!</div>
+      <div class="step-body">
+        <h3>データが空で開く</h3>
+        <p>ログインが切れている場合があります。リクルートエージェントにログインし直してから再度お試しください。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
